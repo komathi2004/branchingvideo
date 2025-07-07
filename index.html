@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Looping Branching Video Player</title>
+    <title>Enhanced Looping Branching Video Player</title>
     <style>
         * {
             margin: 0;
@@ -146,18 +146,62 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
             padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .time-display {
+        .video-container:hover .video-controls {
+            opacity: 1;
+        }
+
+        .controls-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .controls-center {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            font-size: 1.1em;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
         }
 
         .restart-btn {
@@ -177,6 +221,54 @@
             transform: scale(1.05);
         }
 
+        .time-display {
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            min-width: 100px;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            -webkit-appearance: none;
+        }
+
+        .volume-container:hover .volume-slider {
+            opacity: 1;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4facfe;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #4facfe;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
         .progress-bar-container {
             position: absolute;
             bottom: 0;
@@ -184,6 +276,7 @@
             right: 0;
             height: 4px;
             background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
         }
 
         .progress-bar {
@@ -191,6 +284,23 @@
             background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
             width: 0%;
             transition: width 0.1s ease;
+        }
+
+        .progress-handle {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .progress-bar-container:hover .progress-handle {
+            opacity: 1;
         }
 
         .phase-indicator {
@@ -218,8 +328,50 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
+        .speed-selector {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgb(203, 36, 38);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        .speed-selector:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 1000;
+            display: none;
+        }
+
+        .fullscreen-overlay.active {
+            display: block;
+        }
+
+        .fullscreen-overlay .video-container {
+            max-width: 100%;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+        }
+
+        .fullscreen-overlay video {
+            height: 100vh;
+            object-fit: contain;
+        }
+
         .loop-notification {
-            display: none; /* REMOVED - No more cycle notifications */
+            display: none;
         }
 
         @keyframes slideIn {
@@ -244,12 +396,26 @@
                 width: 100%;
                 max-width: 200px;
             }
+
+            .controls-center {
+                display: none;
+            }
+
+            .volume-slider {
+                width: 60px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="video-container">
-        <video id="mainVideo" controls>
+    <div class="fullscreen-overlay" id="fullscreenOverlay">
+        <div class="video-container" id="fullscreenContainer">
+            <!-- Fullscreen video will be moved here -->
+        </div>
+    </div>
+
+    <div class="video-container" id="mainContainer">
+        <video id="mainVideo" preload="auto">
             <!-- Video source will be set by JavaScript -->
         </video>
         
@@ -263,15 +429,40 @@
             </div>
         </div>
         
-        <div class="video-controls">
-            <div class="time-display" id="timeDisplay">0:00 / 3:00</div>
-            <div class="cycle-indicator" id="cycleIndicator">Cycle 1</div>
-            <div class="phase-indicator" id="phaseIndicator">Phase 1</div>
-            <button class="restart-btn" id="restartBtn">↻ Restart</button>
+        <div class="video-controls" id="videoControls">
+            <div class="controls-left">
+                <button class="control-btn" id="playPauseBtn" title="Play/Pause">▶️</button>
+                <div class="time-display" id="timeDisplay">0:00 / 3:00</div>
+            </div>
+            
+            <div class="controls-center">
+                <button class="control-btn" id="skipBackBtn" title="Skip back 10s">⏪</button>
+                <button class="control-btn" id="skipForwardBtn" title="Skip forward 10s">⏩</button>
+                <select class="speed-selector" id="speedSelector" title="Playback speed">
+                    <option value="0.5">0.5x</option>
+                    <option value="0.75">0.75x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                </select>
+            </div>
+            
+            <div class="controls-right">
+                <div class="volume-container">
+                    <button class="control-btn" id="muteBtn" title="Mute/Unmute">🔊</button>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+                </div>
+                <div class="cycle-indicator" id="cycleIndicator">Cycle 1</div>
+                <div class="phase-indicator" id="phaseIndicator">Phase 1</div>
+                <button class="control-btn" id="fullscreenBtn" title="Fullscreen">⛶</button>
+                <button class="restart-btn" id="restartBtn" title="Restart">↻ Restart</button>
+            </div>
         </div>
         
-        <div class="progress-bar-container">
+        <div class="progress-bar-container" id="progressContainer">
             <div class="progress-bar" id="progressBar"></div>
+            <div class="progress-handle" id="progressHandle"></div>
         </div>
     </div>
 
@@ -285,6 +476,8 @@
                 this.video = document.getElementById('mainVideo');
                 this.choiceOverlay = document.getElementById('choiceOverlay');
                 this.progressBar = document.getElementById('progressBar');
+                this.progressContainer = document.getElementById('progressContainer');
+                this.progressHandle = document.getElementById('progressHandle');
                 this.timeDisplay = document.getElementById('timeDisplay');
                 this.restartBtn = document.getElementById('restartBtn');
                 this.phaseIndicator = document.getElementById('phaseIndicator');
@@ -294,7 +487,26 @@
                 this.choiceButtons = document.getElementById('choiceButtons');
                 this.loopNotification = document.getElementById('loopNotification');
                 
-                // 🎬 VIDEO PATHS - ADD YOUR DIFFERENT VIDEO SETS HERE
+                // Enhanced control elements
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.muteBtn = document.getElementById('muteBtn');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.speedSelector = document.getElementById('speedSelector');
+                this.fullscreenBtn = document.getElementById('fullscreenBtn');
+                this.skipBackBtn = document.getElementById('skipBackBtn');
+                this.skipForwardBtn = document.getElementById('skipForwardBtn');
+                this.fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                this.mainContainer = document.getElementById('mainContainer');
+                this.fullscreenContainer = document.getElementById('fullscreenContainer');
+                
+                // Video state
+                this.isPlaying = false;
+                this.isMuted = false;
+                this.isFullscreen = false;
+                this.volume = 1;
+                this.playbackRate = 1;
+                
+                // 🎬 VIDEO PATHS - EXACT SAME AS ORIGINAL
                 this.videoSets = {
                     cycle1: {
                         intro: 'video1.mp4',
@@ -302,7 +514,6 @@
                         choice1_2: 'four1.mp4',
                         choice2_1: 'sixreact.mp4',
                         choice2_2: 'fourreact.mp4',
-                        // Button names for cycle 1
                         buttons: {
                             choice1_1: 'SIXER 🏔️',
                             choice1_2: 'FOUR 🕵️',
@@ -316,7 +527,6 @@
                         choice1_2: 'outnow.mp4',
                         choice2_1: 'sixreact.mp4',
                         choice2_2: 'outreact.mp4',
-                        // Button names for cycle 2 - CHANGE THESE TO YOUR NAMES!
                         buttons: {
                             choice1_1: 'SIXER 🎯',
                             choice1_2: 'OUT 🚫',
@@ -330,7 +540,6 @@
                         choice1_2: 'four1.mp4',
                         choice2_1: 'sixreact.mp4',
                         choice2_2: 'fourreact.mp4',
-                        // Button names for cycle 3
                         buttons: {
                             choice1_1: 'SIXER 🎮',
                             choice1_2: 'FOUR 🎪',
@@ -338,21 +547,19 @@
                             choice2_2: 'FOUR REACTION ⭐'
                         }
                     }
-                    // ADD MORE CYCLES HERE WITH DIFFERENT VIDEOS!
                 };
                 
-                // Looping structure
+                // EXACT SAME LOOPING LOGIC AS ORIGINAL
                 this.cycleKeys = Object.keys(this.videoSets);
                 this.currentCycle = 0;
                 this.totalCycles = this.cycleKeys.length;
                 
-                // Video structure: 20s intro + 40s choice1 + 40s choice2 + 40s final = 180s (3 minutes) per cycle
                 this.cycleDuration = 180; // 3 minutes per cycle
                 this.currentPhase = 'intro';
                 this.choiceShown = false;
                 this.currentTime = 0;
                 this.phaseStartTime = 0;
-                this.selectedPath = []; // Track the path taken
+                this.selectedPath = [];
                 this.completedCycles = 0;
                 
                 this.init();
@@ -360,11 +567,12 @@
             
             init() {
                 this.setupEventListeners();
+                this.setupEnhancedControls();
                 this.startCycle();
             }
             
             setupEventListeners() {
-                // Video event listeners
+                // EXACT SAME VIDEO EVENT LISTENERS AS ORIGINAL
                 this.video.addEventListener('timeupdate', () => {
                     this.handleTimeUpdate();
                 });
@@ -375,14 +583,24 @@
                 
                 this.video.addEventListener('loadedmetadata', () => {
                     console.log('Video loaded successfully');
+                    this.updatePlayPauseButton();
                 });
                 
                 this.video.addEventListener('error', (e) => {
                     console.error('Video error:', e);
-                    // Try to continue to next cycle on error
                     setTimeout(() => {
                         this.nextCycle();
                     }, 2000);
+                });
+                
+                this.video.addEventListener('play', () => {
+                    this.isPlaying = true;
+                    this.updatePlayPauseButton();
+                });
+                
+                this.video.addEventListener('pause', () => {
+                    this.isPlaying = false;
+                    this.updatePlayPauseButton();
                 });
                 
                 // Restart button
@@ -391,6 +609,93 @@
                 });
             }
             
+            setupEnhancedControls() {
+                // Play/Pause button
+                this.playPauseBtn.addEventListener('click', () => {
+                    this.togglePlayPause();
+                });
+                
+                // Mute button
+                this.muteBtn.addEventListener('click', () => {
+                    this.toggleMute();
+                });
+                
+                // Volume slider
+                this.volumeSlider.addEventListener('input', (e) => {
+                    this.setVolume(e.target.value);
+                });
+                
+                // Speed selector
+                this.speedSelector.addEventListener('change', (e) => {
+                    this.setPlaybackSpeed(e.target.value);
+                });
+                
+                // Fullscreen button
+                this.fullscreenBtn.addEventListener('click', () => {
+                    this.toggleFullscreen();
+                });
+                
+                // Skip buttons
+                this.skipBackBtn.addEventListener('click', () => {
+                    this.skipTime(-10);
+                });
+                
+                this.skipForwardBtn.addEventListener('click', () => {
+                    this.skipTime(10);
+                });
+                
+                // Progress bar clicking
+                this.progressContainer.addEventListener('click', (e) => {
+                    this.seekToPosition(e);
+                });
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName.toLowerCase() === 'input') return;
+                    
+                    switch(e.key) {
+                        case ' ':
+                            e.preventDefault();
+                            this.togglePlayPause();
+                            break;
+                        case 'f':
+                        case 'F':
+                            this.toggleFullscreen();
+                            break;
+                        case 'm':
+                        case 'M':
+                            this.toggleMute();
+                            break;
+                        case 'r':
+                        case 'R':
+                            this.restart();
+                            break;
+                        case 'ArrowLeft':
+                            this.skipTime(-10);
+                            break;
+                        case 'ArrowRight':
+                            this.skipTime(10);
+                            break;
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            this.adjustVolume(0.1);
+                            break;
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            this.adjustVolume(-0.1);
+                            break;
+                    }
+                });
+                
+                // ESC key for fullscreen
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.isFullscreen) {
+                        this.toggleFullscreen();
+                    }
+                });
+            }
+            
+            // EXACT SAME CORE FUNCTIONALITY AS ORIGINAL
             startCycle() {
                 const currentCycleKey = this.cycleKeys[this.currentCycle];
                 const currentVideoSet = this.videoSets[currentCycleKey];
@@ -412,26 +717,16 @@
                 console.log(`🎬 Starting Cycle ${this.currentCycle + 1} (${currentCycleKey}) with ${currentVideoSet.intro}...`);
             }
             
-            showCycleNotification() {
-                this.loopNotification.textContent = `🔄 Cycle ${this.currentCycle + 1} Starting...`;
-                this.loopNotification.style.display = 'block';
-                
-                setTimeout(() => {
-                    this.loopNotification.style.display = 'none';
-                }, 2000);
-            }
-            
             handleTimeUpdate() {
                 this.currentTime = this.video.currentTime;
                 this.updateProgress();
                 this.updateTimeDisplay();
                 
-                // Show first choice at 20 seconds during intro
+                // EXACT SAME CHOICE LOGIC AS ORIGINAL
                 if (this.currentPhase === 'intro' && this.currentTime >= 20 && !this.choiceShown) {
                     this.showFirstChoice();
                 }
                 
-                // Show second choice at 40 seconds during first choice videos
                 if ((this.currentPhase === 'choice1_1' || this.currentPhase === 'choice1_2') && 
                     this.currentTime >= 40 && !this.choiceShown) {
                     this.showSecondChoice();
@@ -444,7 +739,6 @@
                 } else if ((this.currentPhase === 'choice1_1' || this.currentPhase === 'choice1_2') && !this.choiceShown) {
                     this.showSecondChoice();
                 } else if (this.currentPhase === 'choice2_1' || this.currentPhase === 'choice2_2') {
-                    // End of cycle - move to next cycle
                     this.completedCycles++;
                     console.log(`✅ Cycle ${this.currentCycle + 1} completed! Total cycles: ${this.completedCycles}`);
                     this.nextCycle();
@@ -455,7 +749,6 @@
                 this.currentCycle = (this.currentCycle + 1) % this.totalCycles;
                 console.log(`🔄 Moving to cycle ${this.currentCycle + 1}...`);
                 
-                // Add a small delay before starting next cycle
                 setTimeout(() => {
                     this.startCycle();
                 }, 1000);
@@ -522,7 +815,6 @@
                 this.phaseStartTime = this.getTotalElapsedTime();
                 this.updateIndicators();
                 
-                // Switch to the selected video from current cycle
                 this.video.src = currentVideoSet[choice];
                 this.video.load();
                 this.video.play().catch(e => {
@@ -549,10 +841,8 @@
             }
             
             updateIndicators() {
-                // Update cycle indicator
                 this.cycleIndicator.textContent = `Cycle ${this.currentCycle + 1}/${this.totalCycles}`;
                 
-                // Update phase indicator
                 const phaseNames = {
                     'intro': 'Phase 1: Introduction',
                     'choice1_1': 'Phase 2: Sixer Path',
@@ -582,6 +872,9 @@
                 const totalElapsed = this.getTotalElapsedTime();
                 const progress = (totalElapsed / this.cycleDuration) * 100;
                 this.progressBar.style.width = Math.min(progress, 100) + '%';
+                
+                // Update handle position
+                this.progressHandle.style.left = Math.min(progress, 100) + '%';
             }
             
             updateTimeDisplay() {
@@ -608,12 +901,167 @@
                 this.startCycle();
                 console.log('🔄 Restarting from Cycle 1...');
             }
+            
+            // ENHANCED CONTROL METHODS
+            togglePlayPause() {
+                if (this.choiceShown) return; // Don't allow play/pause during choices
+                
+                if (this.video.paused) {
+                    this.video.play();
+                } else {
+                    this.video.pause();
+                }
+            }
+            
+            updatePlayPauseButton() {
+                this.playPauseBtn.textContent = this.isPlaying ? '⏸️' : '▶️';
+                this.playPauseBtn.title = this.isPlaying ? 'Pause' : 'Play';
+            }
+            
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                this.video.muted = this.isMuted;
+                this.updateMuteButton();
+            }
+            
+            updateMuteButton() {
+                this.muteBtn.textContent = this.isMuted ? '🔇' : '🔊';
+                this.muteBtn.title = this.isMuted ? 'Unmute' : 'Mute';
+            }
+            
+            setVolume(value) {
+                this.volume = parseFloat(value);
+                this.video.volume = this.volume;
+                this.volumeSlider.value = this.volume;
+                
+                // Update mute button based on volume
+                if (this.volume === 0) {
+                    this.isMuted = true;
+                    this.video.muted = true;
+                } else {
+                    this.isMuted = false;
+                    this.video.muted = false;
+                }
+                this.updateMuteButton();
+            }
+            
+            adjustVolume(delta) {
+                const newVolume = Math.max(0, Math.min(1, this.volume + delta));
+                this.setVolume(newVolume);
+            }
+            
+            setPlaybackSpeed(speed) {
+                this.playbackRate = parseFloat(speed);
+                this.video.playbackRate = this.playbackRate;
+                this.speedSelector.value = speed;
+            }
+            
+            skipTime(seconds) {
+                if (this.choiceShown) return; // Don't allow skipping during choices
+                
+                const newTime = this.video.currentTime + seconds;
+                this.video.currentTime = Math.max(0, Math.min(this.video.duration, newTime));
+            }
+            
+            seekToPosition(event) {
+                if (this.choiceShown) return; // Don't allow seeking during choices
+                
+                const rect = this.progressContainer.getBoundingClientRect();
+                const clickX = event.clientX - rect.left;
+                const percentage = clickX / rect.width;
+                const newTime = (percentage * this.cycleDuration);
+                
+                // Convert back to video time based on current phase
+                let videoTime = 0;
+                if (this.currentPhase === 'intro') {
+                    videoTime = newTime;
+                } else if (this.currentPhase.startsWith('choice1_')) {
+                    videoTime = newTime - 20;
+                } else if (this.currentPhase.startsWith('choice2_')) {
+                    videoTime = newTime - 60;
+                }
+                
+                if (videoTime >= 0 && videoTime <= this.video.duration) {
+                    this.video.currentTime = videoTime;
+                }
+            }
+            
+            toggleFullscreen() {
+                this.isFullscreen = !this.isFullscreen;
+                
+                if (this.isFullscreen) {
+                    this.enterFullscreen();
+                } else {
+                    this.exitFullscreen();
+                }
+            }
+            
+            enterFullscreen() {
+                // Move video container to fullscreen overlay
+                this.fullscreenContainer.appendChild(this.video);
+                this.fullscreenContainer.appendChild(this.choiceOverlay);
+                this.fullscreenContainer.appendChild(document.getElementById('videoControls'));
+                this.fullscreenContainer.appendChild(this.progressContainer);
+                this.fullscreenContainer.appendChild(this.phaseIndicator);
+                this.fullscreenContainer.appendChild(this.cycleIndicator);
+                
+                this.fullscreenOverlay.classList.add('active');
+                this.fullscreenBtn.textContent = '⛶';
+                this.fullscreenBtn.title = 'Exit Fullscreen';
+                
+                // Try to enter browser fullscreen
+                if (this.fullscreenOverlay.requestFullscreen) {
+                    this.fullscreenOverlay.requestFullscreen();
+                } else if (this.fullscreenOverlay.webkitRequestFullscreen) {
+                    this.fullscreenOverlay.webkitRequestFullscreen();
+                } else if (this.fullscreenOverlay.msRequestFullscreen) {
+                    this.fullscreenOverlay.msRequestFullscreen();
+                }
+            }
+            
+            exitFullscreen() {
+                // Move video container back to main container
+                this.mainContainer.appendChild(this.video);
+                this.mainContainer.appendChild(this.choiceOverlay);
+                this.mainContainer.appendChild(document.getElementById('videoControls'));
+                this.mainContainer.appendChild(this.progressContainer);
+                this.mainContainer.appendChild(this.phaseIndicator);
+                this.mainContainer.appendChild(this.cycleIndicator);
+                
+                this.fullscreenOverlay.classList.remove('active');
+                this.fullscreenBtn.textContent = '⛶';
+                this.fullscreenBtn.title = 'Fullscreen';
+                
+                // Exit browser fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
         }
         
         // Initialize the player when the page loads
         let player;
         document.addEventListener('DOMContentLoaded', () => {
             player = new LoopingBranchingVideoPlayer();
+        });
+        
+        // Handle browser fullscreen changes
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && player.isFullscreen) {
+                player.isFullscreen = false;
+                player.exitFullscreen();
+            }
+        });
+        
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (!document.webkitFullscreenElement && player.isFullscreen) {
+                player.isFullscreen = false;
+                player.exitFullscreen();
+            }
         });
     </script>
 </body>
